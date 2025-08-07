@@ -34,22 +34,4 @@ This system is built on the **Retrieval-Augmented Generation (RAG)** paradigm to
 7.  **LLM Generation:** The retrieved relevant chunks, along with the original user query, are fed into the Google Gemini 1.5 Pro model.
 8.  **Structured Output:** The LLM, guided by a strict prompt, evaluates the information and generates a structured JSON response containing the decision, amount, and justification with supporting clauses.
 
-## 🚀 Getting Started (Local Development)
 
-Follow these steps to set up and run the project on your local machine.
-
-### Prerequisites
-
-*   **Python 3.9+:** (Recommended: Python 3.9 or 3.10 for optimal `faiss-cpu` compatibility).
-*   **pip:** Python package installer (comes with Python).
-*   **Node.js & npm:** Required for running the frontend testing script (`send_requests.js`). Download from [nodejs.org](https://nodejs.org/).
-*   **Git:** Version control system.
-*   **VS Code:** Recommended IDE.
-
-### 1. Clone the Repository
-
-Open your terminal (e.g., VS Code Terminal, Git Bash, PowerShell) and clone the project:
-
-```bash
-git clone https://github.com/Siddhantbht02/VScodeVercelGemini.git
-cd VScodeVercelGemini # Navigate into your project folder
