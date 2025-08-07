@@ -18,7 +18,7 @@ except (ValueError, Exception) as e:
 
 # Model and cache file paths
 EMBEDDING_MODEL = 'models/text-embedding-004'
-LLM_MODEL = "gemini-1.5-pro-latest"
+LLM_MODEL = "gemini-2.5-flash-lite"
 DOCUMENT_PATH = "policy_document.txt"
 CACHE_EMBEDDINGS_PATH = "policy_embeddings_gemini.npy"
 CACHE_CHUNKS_PATH = "policy_chunks_gemini.json"
