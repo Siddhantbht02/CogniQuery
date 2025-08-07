@@ -1,30 +1,28 @@
 import os
 from dotenv import load_dotenv
 
-# ==============================================================================
-#  CRITICAL FIX: Load environment variables from .env file FIRST.
-# ==============================================================================
-print("Loading environment variables from .env file...")
+# Load environment variables from .env file first
+print("Loading environment variables...")
 load_dotenv()
-# ==============================================================================
 
-# Now that the environment is loaded, we can safely import our logic module,
-# which will successfully find the GOOGLE_API_KEY when it runs its top-level code.
-from logic import load_and_chunk_document, create_embeddings_and_save
+# Import the logic functions after the environment is set up
+from logic import load_and_chunk_documents, create_embeddings_and_save
 
 # --- Main execution block ---
 if __name__ == "__main__":
-    # We can add a more robust check here now.
     if not os.getenv('GOOGLE_API_KEY'):
-        print("FATAL ERROR: GOOGLE_API_KEY was not found after loading .env file.")
-        print("Please ensure your .env file is in the root directory and contains the correct key.")
+        print("FATAL ERROR: GOOGLE_API_KEY was not found.")
     else:
         print("GOOGLE_API_KEY loaded successfully.")
-        print("Starting knowledge base build process...")
+        print("Starting knowledge base build process from 'source_documents' folder...")
         
-        chunks = load_and_chunk_document()
+        # Call the new, more powerful function
+        chunks = load_and_chunk_documents()
+        
         if chunks:
-            # The logic module is now correctly configured with the API key
+            # The rest of the process is the same
             create_embeddings_and_save(chunks)
+        else:
+            print("No chunks were created. Please check the 'source_documents' folder.")
         
         print("Build process complete.")
