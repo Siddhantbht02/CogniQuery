@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Query System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 2rem 1rem; /* Added padding for smaller screens */
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        p { /* General paragraph style */
+            color: #555;
+            line-height: 1.6;
+        }
+        .info-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        form { display: flex; flex-direction: column; }
+        label { margin-bottom: 0.5rem; font-weight: 600; color: #444; }
+        input[type="file"], textarea {
+            width: 100%; padding: 0.75rem; border: 1px solid #ccc;
+            border-radius: 4px; font-size: 1rem; font-family: inherit;
+            resize: vertical; min-height: 100px; box-sizing: border-box;
+            margin-bottom: 1rem; /* Added margin for file input */
+        }
+        button {
+            margin-top: 0rem; /* Adjusted margin */
+            padding: 0.75rem; border: none; border-radius: 4px;
+            background-color: #007bff; color: white; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: background-color 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #a0c7ff; cursor: not-allowed; }
+        
+        #result-container { margin-top: 2rem; }
+        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+
+        /* --- NEW STYLES FOR FORMATTED RESULTS --- */
+        #results-display {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 1rem;
+            background-color: #fafafa;
+            min-height: 50px;
+        }
+        .result-item { margin-bottom: 0.75rem; }
+        .result-item strong { color: #333; }
+        
+        .decision-box {
+            padding: 1rem;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            border: 1px solid transparent; /* Default transparent border */
+        }
+        .decision-box.approved {
+            background-color: #d4edda; /* Light green */
+            color: #155724; /* Dark green */
+            border-color: #c3e6cb; /* Green border */
+        }
+        .decision-box.rejected {
+            background-color: #f8d7da; /* Light red */
+            color: #721c24; /* Dark red */
+            border-color: #f5c6cb; /* Red border */
+        }
+        
+        .justification-item {
+            border-top: 1px dashed #ccc;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        .justification-item p { margin: 0.5rem 0; }
+        .justification-item em { font-style: italic; color: #555; } /* Style for supporting clause */
+        
+        .error-message { color: #721c24; font-weight: bold; padding: 1rem; background-color: #f8d7da; border-radius: 4px; }
+        /* --- END OF NEW STYLES --- */
+
+        .loader {
+            border: 4px solid #f3f3f3; border-radius: 50%;
+            border-top: 4px solid #3498db; width: 30px;
+            height: 30px; animation: spin 1s linear infinite;
+            margin: 1rem auto; display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Document Query System</h1>
+        <p class="info-text">
+            Upload a document (PDF, DOCX, TXT) and ask a question about its content. The system will process the file in real-time.
+        </p>
+
+        <form id="query-form">
+            <label for="file-upload">1. Upload a Document:</label>
+            <input type="file" id="file-upload" name="file" accept=".pdf,.docx,.txt,.eml" required>
+            
+            <label for="query-text">2. Enter Your Query:</label>
+            <textarea id="query-text" name="query" placeholder="e.g., What is the waiting period for joint replacement?" required></textarea>
+            
+            <button id="submit-button" type="submit">Process Document & Query</button>
+        </form>
+
+        <div id="result-container">
+            <h2>Response:</h2>
+            <div id="loader" class="loader"></div>
+            <!-- THIS IS THE NEW CONTAINER FOR OUR FORMATTED RESULTS -->
+            <div id="results-display">
+                <p>The server's response will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Define the API endpoint URL. 
+        // Use this for local testing.
+        const API_URL = 'http://127.0.0.1:5000/api/process-upload';
+        // When you deploy to Render/Vercel, you would change it to your live URL:
+        // const API_URL = 'https://your-deployed-app.onrender.com/api/process-upload';
+
+        // Get references to the HTML elements
+        const queryForm = document.getElementById('query-form');
+        const fileUpload = document.getElementById('file-upload');
+        const queryText = document.getElementById('query-text');
+        const submitButton = document.getElementById('submit-button');
+        const resultsDisplay = document.getElementById('results-display');
+        const loader = document.getElementById('loader');
+
+        // Listen for the form submission event
+        queryForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default browser action of refreshing the page
+
+            const file = fileUpload.files[0];
+            const query = queryText.value.trim();
+
+            if (!file || !query) {
+                alert('Please upload a file and enter a query.');
+                return;
+            }
+
+            // --- Update UI to show loading state ---
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            loader.style.display = 'block';
+            resultsDisplay.innerHTML = '<p>Processing your request...</p>'; // Clear previous results
+
+            try {
+                // --- Make the API call using fetch() ---
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('query', query);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData, // FormData automatically sets Content-Type header
+                });
+
+                const data = await response.json(); // Always try to parse JSON, even for errors
+
+                if (!response.ok) {
+                    // Handle server-side errors (like 500, 400)
+                    throw new Error(data.error || `Server responded with status ${response.status}`);
+                }
+
+                // --- Display the successful, formatted response ---
+                resultsDisplay.innerHTML = ''; // Clear "Processing your request..."
+
+                // 1. Display Decision
+                const decisionDiv = document.createElement('div');
+                const decisionClass = data.Decision.toLowerCase(); // 'approved' or 'rejected'
+                decisionDiv.className = `decision-box ${decisionClass}`;
+                decisionDiv.textContent = `Decision: ${data.Decision}`;
+                resultsDisplay.appendChild(decisionDiv);
+
+                // 2. Display Amount
+                const amountDiv = document.createElement('div');
+                amountDiv.className = 'result-item';
+                amountDiv.innerHTML = `<strong>Amount:</strong> ${data.Amount}`;
+                resultsDisplay.appendChild(amountDiv);
+
+                // 3. Display Justification
+                if (data.Justification && Array.isArray(data.Justification) && data.Justification.length > 0) {
+                    const justificationTitle = document.createElement('p');
+                    justificationTitle.innerHTML = '<strong>Justification:</strong>';
+                    resultsDisplay.appendChild(justificationTitle);
+
+                    data.Justification.forEach((item, index) => {
+                        const justItemDiv = document.createElement('div');
+                        justItemDiv.className = 'justification-item';
+
+                        const reasoningP = document.createElement('p');
+                        reasoningP.innerHTML = `<strong>Reasoning ${index + 1}:</strong> ${item.Reasoning}`;
+                        
+                        const clauseP = document.createElement('p');
+                        clauseP.innerHTML = `<strong>Supporting Clause:</strong> <em>${item.SupportingClause}</em>`;
+                        
+                        justItemDiv.appendChild(reasoningP);
+                        justItemDiv.appendChild(clauseP);
+                        resultsDisplay.appendChild(justItemDiv);
+                    });
+                } else {
+                    const noJustificationP = document.createElement('p');
+                    noJustificationP.innerHTML = '<strong>No specific justification provided.</strong>';
+                    resultsDisplay.appendChild(noJustificationP);
+                }
+                
+            } catch (error) {
+                // --- Display any errors that occurred ---
+                console.error('Fetch Error:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = `Error: ${error.message}. Please check console for details if needed.`;
+                resultsDisplay.appendChild(errorDiv);
+            } finally {
+                // --- Reset UI after the request is complete ---
+                submitButton.disabled = false;
+                submitButton.textContent = 'Process Document & Query';
+                loader.style.display = 'none';
+            }
+        });
+    </script>
+
+</body>
+</html>

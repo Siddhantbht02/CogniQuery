@@ -208,3 +208,71 @@ Your entire response must be a single, valid JSON object, with no additional tex
     model = genai.GenerativeModel(LLM_MODEL, generation_config={"response_mime_type": "application/json"})
     response = model.generate_content(prompt)
     return response.text
+# ... (all your existing functions like load_and_chunk_documents, process_query_with_gemini, etc., stay the same) ...
+
+# --- NEW FUNCTION FOR ON-THE-FLY PROCESSING ---
+
+# --- This is the new, more robust version of the function ---
+
+def process_single_file_and_query(file_path, query):
+    """
+    Performs the entire RAG pipeline for a single uploaded file with detailed logging.
+    """
+    print(f"\n--- Starting On-the-Fly Processing ---")
+    print(f"File: {file_path}")
+    print(f"Query: {query}")
+
+    # 1. Load and Chunk the single document
+    print("\n[Step 1/3] Partitioning document into chunks...")
+    all_chunks = []
+    filename = os.path.basename(file_path)
+    try:
+        if filename.lower().endswith('.pdf'):
+            full_text = extract_text_from_pdf(file_path)
+            chunks = chunk_text(full_text)
+            all_chunks.extend(chunks)
+        elif filename.lower().endswith('.docx'):
+            full_text = extract_text_from_docx(file_path)
+            chunks = chunk_text(full_text)
+            all_chunks.extend(chunks)
+        elif filename.lower().endswith('.txt'):
+            full_text = extract_text_from_txt(file_path)
+            chunks = chunk_text(full_text)
+            all_chunks.extend(chunks)
+        else:
+            raise ValueError(f"Unsupported file type: {filename}")
+        
+        if not all_chunks:
+            raise ValueError("Could not extract any text chunks from the document. The document might be empty or image-based.")
+            
+        print(f"Successfully partitioned document into {len(all_chunks)} chunks.")
+
+    except Exception as e:
+        print(f"Error during chunking: {e}")
+        # Re-raise the exception to ensure the server returns a 500 error
+        raise
+
+    # 2. Create Embeddings and build an IN-MEMORY vector store
+    print("\n[Step 2/3] Creating embeddings via Gemini API (this may take a moment)...")
+    try:
+        result = genai.embed_content(
+            model=EMBEDDING_MODEL,
+            content=all_chunks,
+            task_type="RETRIEVAL_DOCUMENT"
+        )
+        embeddings_np = np.array(result['embedding'])
+        
+        index = faiss.IndexFlatL2(embeddings_np.shape[1])
+        index.add(embeddings_np)
+        print("In-memory vector store created successfully.")
+    except Exception as e:
+        print(f"FATAL ERROR while creating embeddings: {e}")
+        raise
+
+    # 3. Process the query against the new, temporary knowledge base
+    print("\n[Step 3/3] Processing query via Gemini API...")
+    # This calls your other function to do the final reasoning step
+    final_response = process_query_with_gemini(query, index, all_chunks)
+    print("--- On-the-Fly Processing Complete ---")
+    
+    return final_response

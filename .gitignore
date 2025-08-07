@@ -4,5 +4,17 @@ venv/
 # Environment variables
 .env
 
+# Node.js modules
+node_modules/
+
 # Python cache
 __pycache__/
+*.pyc
+
+# Vercel deployment cache (if you used Vercel CLI locally for testing)
+.vercel/
+
+# --- NEW ADDITION ---
+# Ignore the contents of the uploads folder, but keep the folder itself tracked (when empty)
+uploads/*
+!uploads/.gitkeep # Optional: To ensure the folder is committed even if empty
