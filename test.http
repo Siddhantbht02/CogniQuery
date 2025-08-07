@@ -1,6 +1,0 @@
-POST http://127.0.0.1:5000/api/process
-Content-Type: application/json
-
-{
-    "query": "I am a 46-year-old male who had knee surgery in Pune. My policy is only 3 months old."
-}
