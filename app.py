@@ -17,7 +17,7 @@ from logic import (
 
 # Initialize the Flask app and apply CORS
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Create a folder to temporarily store uploaded files
 UPLOAD_FOLDER = 'uploads'
