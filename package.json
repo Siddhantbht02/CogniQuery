@@ -1,23 +1,28 @@
 {
-  "name": "vscode-vercel-gemini",
+  "name": "hybrid-rag-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Node.js orchestrator for Python RAG backend.",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Siddhantbht02/VScodeVercelGemini.git"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Siddhantbht02/VScodeVercelGemini/issues"
-  },
-  "homepage": "https://github.com/Siddhantbht02/VScodeVercelGemini#readme",
-  "description": "",
   "dependencies": {
-    "axios": "^1.11.0"
-  }
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "dotenv": "^16.4.5",
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Siddhantbht02/CogniQuery.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Siddhantbht02/CogniQuery/issues"
+  },
+  "homepage": "https://github.com/Siddhantbht02/CogniQuery#readme"
 }
