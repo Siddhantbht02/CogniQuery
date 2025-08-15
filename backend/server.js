@@ -22,7 +22,7 @@ const upload = multer({ storage });
 
 // Serve static frontend files from 'public' folder
 // Make sure you have a 'public' folder in your project root, and 'index.html' inside it.
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -34,7 +34,7 @@ if (!require('fs').existsSync(uploadsDir)) {
 // These paths are relative to the project root where server.js runs.
 // Using system Python since venv doesn't exist
 const PYTHON_EXECUTABLE = process.platform === 'win32' ? 'py' : 'python3';
-const PYTHON_WORKER_SCRIPT = path.join(__dirname, 'logic.py'); // Assuming logic.py is your Python worker
+const PYTHON_WORKER_SCRIPT = path.join(__dirname, 'logic.py');
 
 // --- API Endpoint 1: Query Pre-built Knowledge Base (handled by Python worker) ---
 app.post('/api/process', express.json(), (req, res) => {

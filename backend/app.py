@@ -15,9 +15,8 @@ UPLOAD_FOLDER = 'uploads' # For local testing
 os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Ensure uploads folder exists
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-PYTHON_ENV_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'venv')
-PYTHON_EXECUTABLE = os.path.join(PYTHON_ENV_DIR, 'Scripts', 'python.exe') if os.name == 'nt' else \
-                    os.path.join(PYTHON_ENV_DIR, 'bin', 'python')
+# Use current Python interpreter
+PYTHON_EXECUTABLE = sys.executable
 PYTHON_WORKER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logic.py') # logic.py is the worker script
 
 
