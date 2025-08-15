@@ -1,5 +1,4 @@
 import numpy as np
-import faiss
 import google.generativeai as genai
 import json
 import os
@@ -114,16 +113,36 @@ def generate_hypothetical_questions(query):
         questions = [line.strip().split(". ", 1)[1] for line in response.text.strip().split("\n") if ". " in line]
         print(f"Generated questions: {questions}", file=sys.stderr); return questions
     except Exception as e: print(f"Warning: Could not generate hypothetical questions. {e}", file=sys.stderr); return []
-def process_query_with_gemini(query, index, chunks):
+def _retrieve_top_k(query_embeddings: np.ndarray, doc_embeddings: np.ndarray, k: int = 5) -> list:
+    """Return unique top-k document indices across all query embeddings using cosine similarity."""
+    # Normalize embeddings for cosine similarity
+    def l2_normalize(arr: np.ndarray) -> np.ndarray:
+        norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
+        return arr / norms
+
+    q_norm = l2_normalize(query_embeddings)
+    d_norm = l2_normalize(doc_embeddings)
+
+    # Cosine similarity matrix: (num_queries, num_docs)
+    sim = q_norm @ d_norm.T
+
+    # Collect top-k indices across all queries
+    retrieved = set()
+    top_k = min(k, d_norm.shape[0])
+    for i in range(sim.shape[0]):
+        top_indices = np.argpartition(-sim[i], range(top_k))[:top_k]
+        for idx in top_indices:
+            retrieved.add(int(idx))
+    return list(retrieved)
+
+
+def process_query_with_gemini(query, doc_embeddings, chunks):
     print(f"Processing query: '{query}'", file=sys.stderr)
     generated_questions = generate_hypothetical_questions(query); all_queries = [query] + generated_questions
     if not os.getenv('GOOGLE_API_KEY'): raise ValueError("GOOGLE_API_KEY not found for API call.")
     all_embeddings_result = genai.embed_content(model=EMBEDDING_MODEL, content=all_queries, task_type="RETRIEVAL_QUERY")
-    all_embeddings = all_embeddings_result['embedding']
-    k = 5; retrieved_indices = set()
-    for embedding in all_embeddings:
-        distances, indices = index.search(np.array([embedding]), k)
-        for i in indices[0]: retrieved_indices.add(i)
+    all_embeddings = np.array(all_embeddings_result['embedding'])
+    retrieved_indices = _retrieve_top_k(all_embeddings, doc_embeddings, k=5)
     retrieved_chunks = [chunks[i] for i in retrieved_indices]
     print(f"--- Retrieved Clauses for Context ({len(retrieved_chunks)} unique chunks) ---", file=sys.stderr)
     for i, chunk in enumerate(retrieved_chunks): print(f"[{i+1}] {chunk}", file=sys.stderr)
@@ -181,11 +200,11 @@ def process_single_file_and_query_rag(file_path, query):
         if not os.getenv('GOOGLE_API_KEY'): raise ValueError("GOOGLE_API_KEY not found in environment for API call.")
         result = genai.embed_content(model=EMBEDDING_MODEL, content=all_chunks, task_type="RETRIEVAL_DOCUMENT")
         embeddings_np = np.array(result['embedding'])
-        index = faiss.IndexFlatL2(embeddings_np.shape[1]); index.add(embeddings_np)
-        print("In-memory vector store created successfully.", file=sys.stderr)
-    except Exception as e: print(f"FATAL ERROR while creating embeddings: {e}", file=sys.stderr); raise
+        print("In-memory embeddings created successfully.", file=sys.stderr)
+    except Exception as e:
+        print(f"FATAL ERROR while creating embeddings: {e}", file=sys.stderr); raise
     print(f"\nProcessing query via Gemini API...", file=sys.stderr)
-    final_response = process_query_with_gemini(query, index, all_chunks)
+    final_response = process_query_with_gemini(query, embeddings_np, all_chunks)
     print("--- On-the-Fly Processing Complete ---", file=sys.stderr); return final_response
 
 
@@ -234,11 +253,9 @@ if __name__ == "__main__":
             prebuilt_embeddings = np.load(CACHE_EMBEDDINGS_PATH)
             with open(CACHE_CHUNKS_PATH, 'r', encoding='utf-8') as f:
                 prebuilt_chunks = json.load(f)
-            prebuilt_index = faiss.IndexFlatL2(prebuilt_embeddings.shape[1])
-            prebuilt_index.add(prebuilt_embeddings)
             print("Pre-built KB loaded for query test.", file=sys.stderr)
 
-            result_json = process_query_with_gemini(args.query, prebuilt_index, prebuilt_chunks)
+            result_json = process_query_with_gemini(args.query, prebuilt_embeddings, prebuilt_chunks)
             print(result_json) # Print JSON to stdout
             exit(0)
         except FileNotFoundError:
